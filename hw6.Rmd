@@ -1,0 +1,55 @@
+---
+title: "hw6.Rmd"
+author: "Hongsheng Yin"
+date: "April 25, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+1.Import the data and clean appropriately. To read in the data, you can use readxl::read_xlsx('fileNameHere', sheet='sheetNameHere'). Required data are in the sheets Best in show and Best in show full sheet. Take extra care on the column names and the first few rows of the data frame after read in.
+
+```{r}
+library(ggplot2)
+library(ggrepel)
+library(tidyverse)
+kib <- readxl::read_xlsx('KIB - Best in Show (public).xlsx', sheet='Best in show', skip = 5)
+kib <- kib[-1,]
+kib <- kib %>% rename('popularity' = `popularity ranking (1-173, 1 = most popular)`)
+kibclean <- kib %>% select(`Dog breed`, category, `popularity`,`intelligence ranking`,`intelligence category`,`size category`)
+full <- readxl::read_xlsx('KIB - Best in Show (public).xlsx', sheet='Best in show full sheet', skip = 2)
+full <- full[-1,]
+full <- full %>% rename("Dog breed"="Sources - see bottom right")
+full <- full %>% rename("intelligence" = `INTELLIGENCE (TRAINABILITY) ranking`)
+fullclean <- full %>% select(`Dog breed`,category, `datadog score`, `POPULARITY IN US..6`,`POPULARITY IN US..7`, `intelligence`,`POPULAR RATING`,`size category`,`intelligence category` )
+Final <- left_join(kibclean, fullclean, by=c("Dog breed"))
+Final <- Final %>% select(-c(category.y, `size category.y`, `intelligence category.y`))
+Final$`intelligence category.x`[Final$`intelligence category.x` == "no data"] <- NA
+Final
+Final$`popularity` <- as.numeric(Final$`popularity`)
+Final$`intelligence category.x` <- as.factor(Final$`intelligence category.x`)
+Final$`size category.x` <- as.factor(Final$`size category.x`)
+Final$`size category.x` <- factor(Final$`size category.x`, levels = c("small", "medium", "large"))
+Final <- Final %>% rename(`size` = `size category.x`)
+Final <- Final %>% rename(`type` = `category.x`)
+Final <- Final %>% rename(`Intelligence` = `intelligence category.x`)
+```
+2.Create a graphics similar to the top dogs figure. Your figure need to display the following information with appropriate plotting elements:
+
+·breed of dog
+·type of dog (work, toy, etc.)
+·size of dog
+·data score
+·popularity
+·intelligence of the dog
+·appropriate legends & explanation
+Hints and Notes:
+
+·The breed of dog can be displayed without the silhouttes (text only is fine)
+·Avoid (too much) overlap!
+·Choose a good color scheme.
+·Your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio.
+```{r}
+ggplot(Final %>% na.omit(), aes(x=`datadog score`, y=`popularity`, color = `type`, size = `size`, shape = `Intelligence`)) + lims(x=c(0,5),y=c(0,110)) + geom_vline(xintercept = 2.5) + geom_hline(yintercept = 55)  +scale_shape_manual(values = 1:nlevels(Final$`Intelligence`)) +geom_point(position='jitter')+geom_text(aes(label = `Dog breed`),na.rm = TRUE,check_overlap = TRUE, size= 5)+ theme(text = element_text(size=8)) +ggtitle("Best in Show: The Ultimate Data Dog")+xlab("our data score")+ylab("popularity") + scale_color_brewer(palette="Dark2") 
+```
